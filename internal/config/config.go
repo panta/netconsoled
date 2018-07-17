@@ -99,6 +99,12 @@ func parseSinks(c RawConfig) ([]netconsoled.Sink, error) {
 			sink = netconsoled.NoopSink()
 		case "stdout":
 			sink = netconsoled.StdoutSink()
+		case "network":
+			if s.Addr == "" {
+				return nil, errors.New("must specify remote address for network sink")
+			}
+
+			sink, err = netconsoled.NewNetworkSink(s.Addr)
 		default:
 			return nil, fmt.Errorf("unknown sink type in configuration: %q", s.Type)
 		}
@@ -127,6 +133,7 @@ type RawConfig struct {
 	Sinks []struct {
 		Type string `yaml:"type"`
 		File string `yaml:"file"`
+		Addr string `yaml:"address"`
 	} `yaml:"sinks"`
 }
 

@@ -5,6 +5,9 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"net"
+	"time"
+	"sync"
 )
 
 // defaultFormat is the default format descriptor for Sinks.
@@ -192,3 +195,159 @@ func (s *namedSink) Close() error {
 }
 func (s *namedSink) Store(d Data) error { return s.sink.Store(d) }
 func (s *namedSink) String() string     { return s.name }
+
+
+// NetworkSink creates a Sink that writes to conn.
+func NetworkSink(remoteAddr string) Sink {
+	nw := &networkSink{
+		remoteAddr: remoteAddr,
+		format: defaultFormat + "\n",
+	}
+	go nw.BackgroundCommunicate()
+	return nw
+}
+
+// NetworkSink creates a Sink that sends logs through the network via TCP to the
+// remote node.
+func NewNetworkSink(remoteAddr string) (Sink, error) {
+	fmt.Fprintf(os.Stderr, "Create NetworkSink to %v\n", remoteAddr)
+	return newNamedSink(fmt.Sprintf("network: %q", remoteAddr), NetworkSink(remoteAddr)), nil
+}
+
+var _ Sink = &networkSink{}
+
+type networkSink struct {
+	writerSink
+	remoteAddr	string
+	conn		net.Conn
+	connMutex	sync.Mutex
+	errCh		chan error
+	dataCh		chan Data
+	format string
+}
+
+func (s *networkSink) BackgroundCommunicate() error {
+	s.errCh = make(chan error)
+	s.dataCh = make(chan Data)
+	for {
+		if s.conn != nil {
+			s.connMutex.Lock()
+			s.conn.Close()
+			s.conn = nil
+			s.connMutex.Unlock()
+		}
+
+		fmt.Fprintf(os.Stderr, "Connecting to %v...\n", s.remoteAddr)
+		conn, err := net.Dial("tcp", s.remoteAddr)
+		if err != nil {
+			if isEofError(err) {
+				fmt.Fprintf(os.Stderr, "err = %v\n", err)
+				time.Sleep(5 * time.Second)
+				continue
+			} else {
+				return err
+			}
+		}
+		s.connMutex.Lock()
+		s.conn = conn
+		s.connMutex.Unlock()
+		fmt.Fprintf(os.Stderr, "Connected with %v.\n", s.remoteAddr)
+
+		// technique inspired by https://stackoverflow.com/a/23396415/1363486
+		go s.DoWrite()
+		err = <- s.errCh
+
+		if err != nil {
+			if err != io.EOF {
+				// serious error
+				break
+			}
+			fmt.Fprintf(os.Stderr, "EOF -> reconnect\n")
+		}
+	}
+	return nil
+}
+
+func (s *networkSink) DoWrite() error {
+	for {
+		s.connMutex.Lock()
+		if s.conn == nil {
+			s.connMutex.Unlock()
+			time.Sleep(time.Second)
+			continue
+		}
+		d := <-s.dataCh
+		err := s.doSend(d)
+		s.connMutex.Unlock()
+		if err != nil {
+			s.errCh <- err
+			if err != io.EOF {
+				return err
+			}
+		}
+	}
+}
+
+func isEofError(err error) bool {
+	// XXX TODO: check if error is compatibile with EOF (broken pipe / connection refused, ...)
+	//c, ok := err.(*net.OpError)
+	//if ok {
+	//	fmt.Fprintf(os.Stderr, "OpError err:%v %v %v\n", c.Err, reflect.TypeOf(c.Err), reflect.TypeOf(c.Err).String())
+	//}
+	//sc, ok := c.Err.(*os.SyscallError)
+	//if ok {
+	//	fmt.Fprintf(os.Stderr, "SyscallError err:%v %v %v\n", sc.Err, reflect.TypeOf(sc.Err), reflect.TypeOf(sc.Err).String())
+	//}
+	//sce, ok := sc.Err.(*syscall.Errno)
+	//if ok {
+	//	fmt.Fprintf(os.Stderr, "SCE\n", sce)
+	//}
+	//fmt.Fprintf(os.Stderr, "err:%v %v %v\n", err, reflect.TypeOf(err), reflect.TypeOf(err).String())
+	////return err
+
+	return true
+}
+
+func (s *networkSink) doSend(d Data) error {
+	str := fmt.Sprintf(s.format, d.Addr, d.Log.Elapsed.Seconds(), d.Log.Message)
+	b := []byte(str)
+	if s.conn == nil {
+		return io.EOF
+	}
+	n, err := s.conn.Write(b)
+	if err != nil {
+		if isEofError(err) {
+			return io.EOF
+		}
+		return err
+	}
+	if n < len(b) {
+		// short write / disconnection
+		return io.EOF
+	}
+	return nil
+}
+
+func (s *networkSink) Store(d Data) error {
+	s.dataCh <- d
+	return nil
+}
+
+func (s *networkSink) Close() error {
+	// Since a writerSink can be used for files, it's possible that the io.Writer
+	// has a Sync method to flush its contents to disk.  Try it first.
+	if sync, ok := s.w.(syncer); ok {
+		// Attempting to sync stdout, at least on Linux, results in
+		// "invalid argument".  Instead of doing build tags and OS-specific
+		// checks, keep it simple and just Sync as a best effort.
+		_ = sync.Sync()
+	}
+
+	// Close io.Writers which also implement io.Closer.
+	c, ok := s.w.(io.Closer)
+	if !ok {
+		return nil
+	}
+
+	return c.Close()
+}
