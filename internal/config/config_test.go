@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/mdlayher/netconsoled"
-	"github.com/mdlayher/netconsoled/internal/config"
+	"github.com/panta/netconsoled"
+	"github.com/panta/netconsoled/internal/config"
 )
 
 func TestParse(t *testing.T) {

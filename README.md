@@ -1,4 +1,4 @@
-netconsoled [![Build Status](https://travis-ci.org/mdlayher/netconsoled.svg?branch=master)](https://travis-ci.org/mdlayher/netconsoled) [![GoDoc](https://godoc.org/github.com/mdlayher/netconsoled?status.svg)](https://godoc.org/github.com/mdlayher/netconsoled) [![Go Report Card](https://goreportcard.com/badge/github.com/mdlayher/netconsoled)](https://goreportcard.com/report/github.com/mdlayher/netconsoled)
+netconsoled [![Build Status](https://travis-ci.org/panta/netconsoled.svg?branch=master)](https://travis-ci.org/panta/netconsoled) [![GoDoc](https://godoc.org/github.com/panta/netconsoled?status.svg)](https://godoc.org/github.com/panta/netconsoled) [![Go Report Card](https://goreportcard.com/badge/github.com/panta/netconsoled)](https://goreportcard.com/report/github.com/panta/netconsoled)
 ===========
 
 Command `netconsoled` provides a server that can receive and process logs

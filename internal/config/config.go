@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/mdlayher/netconsoled"
+	"github.com/panta/netconsoled"
 	yaml "gopkg.in/yaml.v2"
 )
 

@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/mdlayher/netconsole"
-	"github.com/mdlayher/netconsoled"
-	"github.com/mdlayher/netconsoled/internal/config"
+	"github.com/panta/netconsoled"
+	"github.com/panta/netconsoled/internal/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )

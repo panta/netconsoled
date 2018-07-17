@@ -14,7 +14,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/mdlayher/netconsole"
-	"github.com/mdlayher/netconsoled"
+	"github.com/panta/netconsoled"
 )
 
 var panicSink = netconsoled.FuncSink(func(d netconsoled.Data) error {

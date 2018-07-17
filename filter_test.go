@@ -6,7 +6,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/mdlayher/netconsole"
-	"github.com/mdlayher/netconsoled"
+	"github.com/panta/netconsoled"
 )
 
 var panicFilter = netconsoled.FuncFilter(func(in netconsoled.Data) (netconsoled.Data, bool, error) {

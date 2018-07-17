@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 
-	"github.com/mdlayher/netconsoled/internal/config"
+	"github.com/panta/netconsoled/internal/config"
 )
 
 func initConfig(ll *log.Logger, file string) {
