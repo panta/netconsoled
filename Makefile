@@ -20,7 +20,7 @@ all: build push
 
 .PHONY: build-go
 build-go:
-	${PACKR_EXECUTABLE} build -o netconsoled -ldflags "-X main.version=${VERSION}" ./cmd/netconsoled
+	${GO_EXECUTABLE} build -o netconsoled -ldflags "-X main.version=${VERSION}" ./cmd/netconsoled
 
 .PHONY: bootstrap-dist
 bootstrap-dist:
