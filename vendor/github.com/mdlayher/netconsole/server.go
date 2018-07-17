@@ -2,6 +2,7 @@ package netconsole
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"os"
 	"strings"
@@ -38,7 +39,9 @@ func NewServer(network, addr string, handle func(addr net.Addr, l Log)) *Server 
 		addr:    addr,
 		handle:  handle,
 		// By default, do nothing with dropped logs.
-		drop: func(_ net.Addr, _ []byte) {},
+		drop: func(_ net.Addr, d []byte) {
+			fmt.Fprintf(os.Stderr, "DROPPING %v\n", string(d))
+		},
 	}
 }
 
