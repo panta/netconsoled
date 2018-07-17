@@ -1,0 +1,12 @@
+FROM debian:jessie
+MAINTAINER Marco Pantaleoni <marco.pantaleoni@gmail.com>
+
+# Install packages
+RUN apt-get update -q && \
+    apt-get install -y --no-install-recommends netcat busybox-syslogd && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+COPY ./run_syslogd.sh /
+RUN chmod a+x /run_syslogd.sh
+ENTRYPOINT ["/run_syslogd.sh"]

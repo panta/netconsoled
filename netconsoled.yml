@@ -1,0 +1,17 @@
+---
+# Configuration of the netconsoled server.
+server:
+  # Required: listen for incoming netconsole logs.
+  udp_addr: :6666
+  # Optional: enable HTTP server for Prometheus metrics.
+  http_addr: :8080
+# Zero or more filters to apply to incoming logs.
+filters:
+  # By default, apply no filtering to logs.
+  - type: noop
+# Zero or more sinks to use to store processed logs.
+sinks:
+  # By default, print logs to stdout and to a file.
+  - type: stdout
+  - type: file
+    file: /tmp/netconsoled.log

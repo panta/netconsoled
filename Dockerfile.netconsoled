@@ -1,0 +1,19 @@
+FROM golang:latest as builder
+MAINTAINER Marco Pantaleoni <marco.pantaleoni@gmail.com>
+# RUN mkdir /app
+# WORKDIR /app
+WORKDIR /go/src/github.com/panta/netconsoled/
+#COPY . /app/
+RUN go get -d -v github.com/mdlayher/netconsole
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -o netconsoled ./cmd/netconsoled
+
+
+FROM alpine:latest  
+MAINTAINER Marco Pantaleoni <marco.pantaleoni@gmail.com>
+RUN apk --no-cache add ca-certificates
+WORKDIR /root/
+COPY --from=builder /go/src/github.com/panta/netconsoled/netconsoled .
+COPY netconsoled.yml .
+EXPOSE 6666/udp
+CMD ["./netconsoled"]

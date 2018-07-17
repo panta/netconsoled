@@ -1,0 +1,34 @@
+version: '2'
+volumes:
+  netconsoled-logs:
+services:
+  syslogd:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.syslogd
+    links:
+      - netconsoled
+    environment:
+      - REMOTE_LOGGING_IP=netconsoled
+      - REMOTE_LOGGING_PORT=6666
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "25m"
+        max-file: "2"
+  netconsoled:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.netconsoled
+    ports:
+      - "6666/udp"
+      - "8080"
+      # - "0.0.0.0:6666/udp:6666/udp"
+      # - "0.0.0.0:8080:8080"
+    volumes:
+      - netconsoled-logs:/tmp
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "25m"
+        max-file: "2"
