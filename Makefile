@@ -36,7 +36,7 @@ build-all:
 		-os="linux darwin windows" \
 		-arch="amd64 386" \
 		-osarch="!darwin/386 !darwin/arm64" \
-		-output="dist/{{.OS}}-{{.Arch}}/{{.Dir}}" .
+		-output="dist/{{.OS}}-{{.Arch}}/{{.Dir}}" ./cmd/netconsoled
 
 .PHONY: build-win
 build-win:
@@ -47,7 +47,7 @@ build-win:
 		-os="windows" \
 		-arch="amd64 386" \
 		-osarch="!darwin/arm64" \
-		-output="dist/{{.OS}}-{{.Arch}}/{{.Dir}}" .
+		-output="dist/{{.OS}}-{{.Arch}}/{{.Dir}}" ./cmd/netconsoled
 
 .PHONY: build
 build:
