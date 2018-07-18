@@ -13,7 +13,7 @@ import (
 )
 
 // defaultFormat is the default format descriptor for Sinks.
-const defaultFormat = "[% 15s] [% 15f] %s"
+const defaultFormat = "[% 15s] [% 25s | % 15f] %s"
 
 // A Sink enables storage of processed logs.
 //
@@ -163,7 +163,7 @@ func (s *writerSink) Close() error {
 }
 
 func (s *writerSink) Store(d Data) error {
-	_, err := fmt.Fprintf(s.w, s.format, ipFromAddr(d.Addr), d.Log.Elapsed.Seconds(), d.Log.Message)
+	_, err := fmt.Fprintf(s.w, s.format, ipFromAddr(d.Addr), d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
 	return err
 }
 
@@ -311,7 +311,7 @@ func isEofError(err error) bool {
 }
 
 func (s *networkSink) doSend(d Data) error {
-	str := fmt.Sprintf(s.format, ipFromAddr(d.Addr), d.Log.Elapsed.Seconds(), d.Log.Message)
+	str := fmt.Sprintf(s.format, ipFromAddr(d.Addr), d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
 	b := []byte(str)
 	if s.conn == nil {
 		return io.EOF
@@ -440,7 +440,7 @@ func (s *filePerIPWriterSink) Store(d Data) error {
 		w = f
 	}
 
-	_, err := fmt.Fprintf(w, s.format, ip, d.Log.Elapsed.Seconds(), d.Log.Message)
+	_, err := fmt.Fprintf(w, s.format, ip, d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
 	return err
 }
 

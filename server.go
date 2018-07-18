@@ -7,11 +7,13 @@ import (
 
 	"github.com/mdlayher/netconsole"
 	"github.com/prometheus/client_golang/prometheus"
+	"time"
 )
 
 // Data carries a netconsole log and its metadata.
 type Data struct {
 	Addr net.Addr
+	Received time.Time
 	Log  netconsole.Log
 }
 
@@ -48,6 +50,7 @@ func (s *Server) Handle(addr net.Addr, l netconsole.Log) {
 	// Package up information for easier parameter passing.
 	in := Data{
 		Addr: addr,
+		Received: time.Now(),
 		Log:  l,
 	}
 
