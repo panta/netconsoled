@@ -417,6 +417,9 @@ func (s *filePerIPWriterSink) Close() error {
 }
 
 func ipFromAddr(addr net.Addr) string {
+	if addr == nil {
+		return ""
+	}
 	ip_port := addr.String()
 	colon := strings.LastIndex(ip_port, ":")
 	if colon > 0 {
