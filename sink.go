@@ -14,6 +14,7 @@ import (
 
 // defaultFormat is the default format descriptor for Sinks.
 const defaultFormat = "[% 15s] [% 25s | % 15f] %s"
+const defaultTimeFormat = time.RFC3339
 
 // A Sink enables storage of processed logs.
 //
@@ -125,6 +126,7 @@ func WriterSink(w io.Writer) Sink {
 		// Add a newline on behalf of the caller for ease of use.
 		// TODO(mdlayher): expose formatting later?
 		format: defaultFormat + "\n",
+		timeFormat: defaultTimeFormat,
 	}
 }
 
@@ -133,6 +135,7 @@ var _ Sink = &writerSink{}
 type writerSink struct {
 	w      io.Writer
 	format string
+	timeFormat string
 }
 
 // A syncer is a type which can flush its contents from memory to disk, e.g.
@@ -163,7 +166,7 @@ func (s *writerSink) Close() error {
 }
 
 func (s *writerSink) Store(d Data) error {
-	_, err := fmt.Fprintf(s.w, s.format, ipFromAddr(d.Addr), d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
+	_, err := fmt.Fprintf(s.w, s.format, ipFromAddr(d.Addr), d.Received.Format(s.timeFormat), d.Log.Elapsed.Seconds(), d.Log.Message)
 	return err
 }
 
@@ -204,6 +207,7 @@ func NetworkSink(remoteAddr string) Sink {
 	nw := &networkSink{
 		remoteAddr: remoteAddr,
 		format: defaultFormat + "\n",
+		timeFormat: defaultTimeFormat,
 	}
 	go nw.BackgroundCommunicate()
 	return nw
@@ -225,7 +229,8 @@ type networkSink struct {
 	connMutex	sync.Mutex
 	errCh		chan error
 	dataCh		chan Data
-	format string
+	format		string
+	timeFormat	string
 }
 
 func (s *networkSink) BackgroundCommunicate() error {
@@ -311,7 +316,7 @@ func isEofError(err error) bool {
 }
 
 func (s *networkSink) doSend(d Data) error {
-	str := fmt.Sprintf(s.format, ipFromAddr(d.Addr), d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
+	str := fmt.Sprintf(s.format, ipFromAddr(d.Addr), d.Received.Format(s.timeFormat), d.Log.Elapsed.Seconds(), d.Log.Message)
 	b := []byte(str)
 	if s.conn == nil {
 		return io.EOF
@@ -372,6 +377,7 @@ func FilePerIPWriterSink(dirname string) Sink {
 		// Add a newline on behalf of the caller for ease of use.
 		// TODO(mdlayher): expose formatting later?
 		format: defaultFormat + "\n",
+		timeFormat: defaultTimeFormat,
 	}
 }
 
@@ -381,6 +387,7 @@ type filePerIPWriterSink struct {
 	dirname	string
 	wm		map[net.Addr] io.Writer
 	format	string
+	timeFormat string
 }
 
 func (s *filePerIPWriterSink) Close() error {
@@ -440,7 +447,7 @@ func (s *filePerIPWriterSink) Store(d Data) error {
 		w = f
 	}
 
-	_, err := fmt.Fprintf(w, s.format, ip, d.Received.Format(time.RFC3339), d.Log.Elapsed.Seconds(), d.Log.Message)
+	_, err := fmt.Fprintf(w, s.format, ip, d.Received.Format(s.timeFormat), d.Log.Elapsed.Seconds(), d.Log.Message)
 	return err
 }
 
