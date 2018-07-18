@@ -9,15 +9,29 @@ import (
 	yaml "gopkg.in/yaml.v2"
 )
 
+const (
+	ModeNetconsoled   Mode = "netconsoled"
+	ModeReceiver Mode = "receiver"
+)
+
+type Mode string
+
 // Parse parses a Config from its raw YAML format.
-func Parse(b []byte) (*Config, error) {
+func Parse(mode Mode, b []byte) (*Config, error) {
 	var c RawConfig
 	if err := yaml.Unmarshal(b, &c); err != nil {
 		return nil, err
 	}
 
-	if err := checkServerConfig(c.Server); err != nil {
-		return nil, err
+	switch mode {
+	case ModeNetconsoled:
+		if err := checkServerConfig(c.Server); err != nil {
+			return nil, err
+		}
+	case ModeReceiver:
+		if err := checkReceiverConfig(c.Server); err != nil {
+			return nil, err
+		}
 	}
 
 	filters, err := parseFilters(c)
@@ -37,8 +51,27 @@ func Parse(b []byte) (*Config, error) {
 	}, nil
 }
 
-// checkServerConfig validates a ServerConfig.
+// checkServerConfig validates a ServerConfig for ModeNetconsoled.
 func checkServerConfig(c ServerConfig) error {
+	if c.UDPAddr == "" {
+		return errors.New("server UDP address must not be empty")
+	}
+
+	if _, err := net.ResolveUDPAddr("udp", c.UDPAddr); err != nil {
+		return fmt.Errorf("failed to parse server UDP address: %v", err)
+	}
+
+	if c.HTTPAddr != "" {
+		if _, err := net.ResolveTCPAddr("tcp", c.HTTPAddr); err != nil {
+			return fmt.Errorf("failed to parse server HTTP address: %v", err)
+		}
+	}
+
+	return nil
+}
+
+// checkReceiverConfig validates a ServerConfig for ModeReceiver.
+func checkReceiverConfig(c ServerConfig) error {
 	if c.UDPAddr == "" {
 		return errors.New("server UDP address must not be empty")
 	}
@@ -146,6 +179,7 @@ type RawConfig struct {
 
 // A Config is the processed configuration for a netconsoled server.
 type Config struct {
+	Mode	Mode
 	Server  ServerConfig
 	Filters []netconsoled.Filter
 	Sinks   []netconsoled.Sink
@@ -156,4 +190,11 @@ type Config struct {
 type ServerConfig struct {
 	UDPAddr  string `yaml:"udp_addr"`
 	HTTPAddr string `yaml:"http_addr"`
+}
+
+// A ReceiverConfig contains configuration for a netconsoled receiver
+// mode.
+type RecevierConfig struct {
+	TCPAddr string `yaml:"address"`
+	
 }
