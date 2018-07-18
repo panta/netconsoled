@@ -8,6 +8,8 @@ import (
 	"net"
 	"time"
 	"sync"
+	"path"
+	"strings"
 )
 
 // defaultFormat is the default format descriptor for Sinks.
@@ -161,7 +163,7 @@ func (s *writerSink) Close() error {
 }
 
 func (s *writerSink) Store(d Data) error {
-	_, err := fmt.Fprintf(s.w, s.format, d.Addr, d.Log.Elapsed.Seconds(), d.Log.Message)
+	_, err := fmt.Fprintf(s.w, s.format, ipFromAddr(d.Addr), d.Log.Elapsed.Seconds(), d.Log.Message)
 	return err
 }
 
@@ -309,7 +311,7 @@ func isEofError(err error) bool {
 }
 
 func (s *networkSink) doSend(d Data) error {
-	str := fmt.Sprintf(s.format, d.Addr, d.Log.Elapsed.Seconds(), d.Log.Message)
+	str := fmt.Sprintf(s.format, ipFromAddr(d.Addr), d.Log.Elapsed.Seconds(), d.Log.Message)
 	b := []byte(str)
 	if s.conn == nil {
 		return io.EOF
@@ -351,3 +353,95 @@ func (s *networkSink) Close() error {
 
 	return c.Close()
 }
+
+// --------------------------------------------------------------------------
+//   Different log file per IP
+// --------------------------------------------------------------------------
+
+// FileSink creates a Sink that creates or opens the specified file and appends
+// logs to the file.
+func FilePerIPSink(dirname string) (Sink, error) {
+	return newNamedSink(fmt.Sprintf("file-per-ip: %q", dirname), FilePerIPWriterSink(dirname)), nil
+}
+
+// WriterSink creates a Sink that writes to w.
+func FilePerIPWriterSink(dirname string) Sink {
+	return &filePerIPWriterSink{
+		dirname: dirname,
+		wm: make(map[net.Addr] io.Writer),
+		// Add a newline on behalf of the caller for ease of use.
+		// TODO(mdlayher): expose formatting later?
+		format: defaultFormat + "\n",
+	}
+}
+
+var _ Sink = &writerSink{}
+
+type filePerIPWriterSink struct {
+	dirname	string
+	wm		map[net.Addr] io.Writer
+	format	string
+}
+
+func (s *filePerIPWriterSink) Close() error {
+	for _, w := range s.wm {
+		// Since a writerSink can be used for files, it's possible that the io.Writer
+		// has a Sync method to flush its contents to disk.  Try it first.
+		if sync, ok := w.(syncer); ok {
+			// Attempting to sync stdout, at least on Linux, results in
+			// "invalid argument".  Instead of doing build tags and OS-specific
+			// checks, keep it simple and just Sync as a best effort.
+			_ = sync.Sync()
+		}
+
+		// Close io.Writers which also implement io.Closer.
+		c, ok := w.(io.Closer)
+		if !ok {
+			return nil
+		}
+
+		err := c.Close()
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ipFromAddr(addr net.Addr) string {
+	ip_port := addr.String()
+	colon := strings.LastIndex(ip_port, ":")
+	if colon > 0 {
+		return ip_port[0 : colon]
+	}
+	return ip_port
+}
+
+func (s *filePerIPWriterSink) Store(d Data) error {
+	ip := ipFromAddr(d.Addr)
+
+	w, ok := s.wm[d.Addr]
+	if !ok {
+		pathname := path.Join(s.dirname, ip + ".log")
+		pathname = filepath.Clean(pathname)
+
+		if _, err := os.Stat(s.dirname); os.IsNotExist(err) {
+			os.Mkdir(s.dirname, 0755)
+		}
+
+		// Create or open the file, and always append to it.
+		f, err := os.OpenFile(pathname, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		if err != nil {
+			return err
+		}
+
+		s.wm[d.Addr] = f
+		w = f
+	}
+
+	_, err := fmt.Fprintf(w, s.format, ip, d.Log.Elapsed.Seconds(), d.Log.Message)
+	return err
+}
+
+func (s *filePerIPWriterSink) String() string { return "filePerIPWriter" }

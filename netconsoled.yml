@@ -4,7 +4,7 @@ server:
   # Required: listen for incoming netconsole logs.
   udp_addr: :6666
   # Optional: enable HTTP server for Prometheus metrics.
-  http_addr: :8080
+  # http_addr: :8080
 # Zero or more filters to apply to incoming logs.
 filters:
   # By default, apply no filtering to logs.
@@ -15,5 +15,7 @@ sinks:
   - type: stdout
   - type: file
     file: /tmp/netconsoled.log
-  - type: network
-    address: 127.0.0.1:8123
+  - type: file-per-ip
+    directory: /tmp/netconsoled
+#  - type: network
+#    address: 127.0.0.1:8123

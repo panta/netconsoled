@@ -95,6 +95,12 @@ func parseSinks(c RawConfig) ([]netconsoled.Sink, error) {
 			}
 
 			sink, err = netconsoled.FileSink(s.File)
+		case "file-per-ip":
+			if s.Directory == "" {
+				return nil, errors.New("must specify output directory for file-per-ip sink")
+			}
+
+			sink, err = netconsoled.FilePerIPSink(s.Directory)
 		case "noop":
 			sink = netconsoled.NoopSink()
 		case "stdout":
@@ -134,6 +140,7 @@ type RawConfig struct {
 		Type string `yaml:"type"`
 		File string `yaml:"file"`
 		Addr string `yaml:"address"`
+		Directory string `yaml:"directory"`
 	} `yaml:"sinks"`
 }
 
