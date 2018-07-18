@@ -121,6 +121,18 @@ func testMultiSinkOK(t *testing.T, d netconsoled.Data) {
 	}
 }
 
+func ipFromAddr(addr net.Addr) string {
+	if addr == nil {
+		return ""
+	}
+	ip_port := addr.String()
+	colon := strings.LastIndex(ip_port, ":")
+	if colon > 0 {
+		return ip_port[0 : colon]
+	}
+	return ip_port
+}
+
 func testWriterSinkOK(t *testing.T, d netconsoled.Data) {
 	t.Helper()
 
@@ -133,7 +145,7 @@ func testWriterSinkOK(t *testing.T, d netconsoled.Data) {
 
 	// Just check if a couple of string fields ended up in the buffer.
 	ss := []string{
-		d.Addr.String(),
+		ipFromAddr(d.Addr),
 		"0.0",
 		d.Log.Message,
 	}
